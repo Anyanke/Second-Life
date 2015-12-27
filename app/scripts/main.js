@@ -17,7 +17,7 @@ Backbone.View.extend({
     self.$el.addClass('hiden');
     return this;
   },
-  renderItem: function (model) {
+  renderSlide: function (model) {
     if (this.renderTout) {
       window.clearTimeout(this.renderTout);
     }
@@ -31,7 +31,7 @@ Backbone.View.extend({
       this.renderQueue = [];
     }.bind(this), 10);
   },
-  getItems: function () {
+  getSlides: function () {
     this.canUpdate = true;
     this.updating = true;
     this.$('.no-items').hide();
@@ -56,26 +56,7 @@ Backbone.View.extend({
       }.bind(this)
     });
   },
-  redrawFilter: function (filter) {
-    this.$filter.find('.filter-criteria').remove();
-    var filterRow = this.filter.get('filterRow');
-
-    this.$filter.append(this.tpls.filterRow({
-      filterRow: filterRow
-      , active: filterRow != 'none' ? true : false
-    }));
-
-    this.saveCheck();
-  },
-  scrollCheck: function () {
-    if (this.updating) { return; }
-    if (this.canUpdate &&
-      this.$itemsList.prop('scrollHeight') <= this.$itemsList.height() + this.$itemsList.scrollTop() + 500) {
-      this.updating = true;
-      this.loadItems();
-    }
-  },
-  loadItems: function () {
+  loadSlide: function () {
     this.curPage += 1;
     this.$('li.loader').show();
     window.setTimeout(function () {
@@ -96,19 +77,6 @@ Backbone.View.extend({
         }.bind(this)
       });
     }.bind(this), 0);
-  },
-  saveCheck: function () {
-    var iconSave = this.$('.filter-control i.fa-floppy-o');
-    if (!this.filter._canSave()) {
-      return iconSave.removeClass('icon-active');
-    };
-
-    if (!iconSave.hasClass('icon-active')) {
-      iconSave.addClass('icon-active');
-    }
-  },
-  preventSave: function (evt) {
-    if (!this.$(evt.target).hasClass('icon-active')) { return false; }
   },
   events: {
     'tap a[href="#saveFilter"]' : 'preventSave',
