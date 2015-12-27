@@ -1,5 +1,5 @@
-Backbone.View.extend({
-  el: '#itemsList',
+var Explanation = Backbone.View.extend({
+  el: '#explanation',
   initialize: function () {
     //this.$itemsList = this.$('div.content > ul.alerts-list');
     //this.collection = new (require('../collections/items'))();
@@ -8,8 +8,12 @@ Backbone.View.extend({
     this.renderQueue = [];
   },
   show: function (fn) {
+    console.log('show');
+
+
     var self = this;
-    self.$el.removeClass('hiden');
+    console.log(self.$el);
+    self.$el.removeClass('hidden');
 
     return self;
   },
@@ -93,9 +97,7 @@ var App = Backbone.Router.extend({
   },
   start: function () {
     this.views = {
-      itemView: new (require('./views/itemView'))({
-        filter: filter
-      })
+      explanation: new Explanation()
     };
 
     Backbone.history.start();
@@ -106,7 +108,8 @@ var App = Backbone.Router.extend({
     }
   },
   home: function () {
-    var _view = this.views.itemView;
+    console.log('hone');
+    var _view = this.views.explanation;
     _view.show(function () {
       this._hidePrev();
       this.activeView = _view;
