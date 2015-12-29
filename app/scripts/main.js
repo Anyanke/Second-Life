@@ -1,64 +1,79 @@
 var Explanation = Backbone.View.extend({
   el: '#explanation',
   initialize: function () {
-    //this.$itemsList = this.$('div.content > ul.alerts-list');
-    //this.collection = new (require('../collections/items'))();
+    this.$textElement = this.$('.text-box');
+    var model = Backbone.Model.extend({
+      idAttribute: 'idx'
+    });
+    var col = Backbone.Collection.extend({
+      url: '/scenary/act1.json',
+      model: model,
+      parse: function (result) {
+        return result.data;
+      }
+    });
+    this.collection = new col();
     this.currSlide = null;
     this.canProceed = true;
-    this.renderQueue = [];
+    this.tInterval = null;
+    this.textToAnimate = null;
   },
-  show: function (fn) {
-    console.log('show');
-
-
+  show: function () {
     var self = this;
-    console.log(self.$el);
-    self.$el.removeClass('hidden');
+    this.collection.fetch({
+      success: function (collection) {
+        self.$el.removeClass('hidden');
+        console.log(collection.length);
+      }
+    });
 
     return self;
   },
   hide: function () {
-    self.$el.addClass('hiden');
+    var self = this;
+    self.$el.addClass('hidden');
     return this;
   },
-  renderSlide: function (model) {
-    if (this.renderTout) {
-      window.clearTimeout(this.renderTout);
+  animateSlide: function () {
+    this.$textElement.html('');
+    var intervalIndex = 0;
+    var maxInterval = this.textToAnimate.length - 1;
+
+    this.tInterval = setInterval(function () {
+      if (intervalIndex > maxInterval) {
+        return this.clearInterval();
+      }
+      var currentHtml = this.$textElement.html();
+      this.$textElement.html(currentHtml += this.textToAnimate[intervalIndex]);
+      intervalIndex++
+    }.bind(this), 30);
+  },
+  stopAnimation: function () {
+    if (!this.tInterval) {
+      return;
     }
 
-    this.renderQueue.push(this.tpls.item(model.toJSON()));
-
-    this.renderTout = window.setTimeout(function () {
-      this.$itemsList.find('li.loader').before(
-        this.renderQueue
-      );
-      this.renderQueue = [];
-    }.bind(this), 10);
+    this.clearInterval();
+    this.$textElement.html(this.textToAnimate);
   },
-  getSlides: function () {
-    this.canUpdate = true;
-    this.updating = true;
-    this.$('.no-items').hide();
-    this.$('li.loader').show();
-    this.curPage = 1;
-    this.$itemsList.find('li:not(li.escape)').remove();
-    this.collection.fetch({
-      reset: true,
-      silent: false,
-      data: {
-        limit: this.perPage,
-        page: this.curPage,
-        filters: JSON.stringify(this.filter.get('filters'))
-      },
-      success: function (collection, data) {
-        this.updating = false;
-        this.$('li.loader').hide();
-        if (!data.reports.length) {
-          this.canUpdate = false;
-          this.$('.no-items').show();
-        }
-      }.bind(this)
-    });
+  clearInterval: function () {
+    if (!this.tInterval) {
+      return;
+    }
+
+    window.clearInterval(this.tInterval);
+    this.tInterval = null;
+  },
+  renderSlide: function () {
+    if (this.tInterval) {
+      return this.stopAnimation();
+    }
+
+    var slideToRender = this.currSlide ? this.currSlide + 1 : 1;
+    this.textToAnimate = this.collection.get(slideToRender).get('text');
+    this.animateSlide();
+
+    this.currSlide += 1;
   },
   loadSlide: function () {
     this.curPage += 1;
@@ -66,9 +81,9 @@ var Explanation = Backbone.View.extend({
     window.setTimeout(function () {
       this.collection.fetch({
         data: {
-          limit: this.perPage
-          , page: this.curPage
-          , filters: JSON.stringify(this.filter.get('filters'))
+          limit: this.perPage,
+          page: this.curPage,
+          filters: JSON.stringify(this.filter.get('filters'))
         },
         success: function (collection, data) {
           this.updating = false;
@@ -82,23 +97,60 @@ var Explanation = Backbone.View.extend({
       });
     }.bind(this), 0);
   },
+  nextSlide: function () {
+    console.log(this.currSlide);
+
+    if (this.currSlide === this.collection.length) {
+      console.log('stop it dude');
+      return;
+    }
+    this.renderSlide();
+  },
   events: {
-    'tap a[href="#saveFilter"]' : 'preventSave',
-    'tap i.fa-refresh': 'getItems'
+    'click': 'nextSlide'
+  }
+});
+
+var Menu = Backbone.View.extend({
+  el: '#game-menu',
+  initialize: function () {
+  },
+  show: function () {
+    var self = this;
+    self.$el.removeClass('hidden');
+
+    return self;
+  },
+  hide: function () {
+    var self = this;
+    self.$el.addClass('hidden');
+    return this;
+  },
+  newGame: function () {
+    this.trigger('new-game');
+  },
+  events: {
+    'click .new-game': 'newGame'
   }
 });
 
 var App = Backbone.Router.extend({
   routes: {
-    '': 'home'
+    '': 'menu',
+    'intro': 'intro'
   },
   initialize: function () {
     this.activeView = null;
   },
   start: function () {
     this.views = {
+      menu: new Menu(),
       explanation: new Explanation()
     };
+
+    this.views.menu.on('new-game', function () {
+      this.navigate('intro', {trigger: true})
+    }.bind(this));
 
     Backbone.history.start();
   },
@@ -107,13 +159,17 @@ var App = Backbone.Router.extend({
       this.activeView.hide();
     }
   },
-  home: function () {
-    console.log('hone');
+  menu: function () {
+    var _view = this.views.menu;
+    this._hidePrev();
+    this.activeView = _view;
+    _view.show();
+  },
+  intro: function () {
     var _view = this.views.explanation;
-    _view.show(function () {
-      this._hidePrev();
-      this.activeView = _view;
-    }.bind(this));
+    this._hidePrev();
+    this.activeView = _view;
+    _view.show();
   }
 });
 
